@@ -17,13 +17,14 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiNoteReaction } from '@/models/NoteReaction.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiPoll } from '@/models/Poll.js';
+import { MiEvent } from '@/models/Event.js';
 import type { MiPollVote } from '@/models/PollVote.js';
 import { UserKeypairService } from '@/core/UserKeypairService.js';
 import { MfmService, type Appender } from '@/core/MfmService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, PollsRepository, MiMeta } from '@/models/_.js';
+import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, PollsRepository, EventsRepository, MiMeta } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { IdService } from '@/core/IdService.js';
@@ -56,6 +57,9 @@ export class ApRendererService {
 
 		@Inject(DI.pollsRepository)
 		private pollsRepository: PollsRepository,
+
+		@Inject(DI.eventsRepository)
+		private eventsRepository: EventsRepository,
 
 		private customEmojiService: CustomEmojiService,
 		private userEntityService: UserEntityService,
@@ -425,9 +429,14 @@ export class ApRendererService {
 
 		const text = note.text ?? '';
 		let poll: MiPoll | null = null;
+		let event: MiEvent | null = null;
 
 		if (note.hasPoll) {
 			poll = await this.pollsRepository.findOneBy({ noteId: note.id });
+		}
+
+		if (note.hasEvent) {
+			event = await this.eventsRepository.findOneBy({ noteId: note.id });
 		}
 
 		const apAppend: Appender[] = [];
@@ -476,6 +485,14 @@ export class ApRendererService {
 			})),
 		} as const : {};
 
+		const asEvent = event ? {
+			type: 'Event',
+			name: event.title,
+			startTime: event.start,
+			endTime: event.end,
+			...event.metadata,
+		} as const : {};
+
 		return {
 			id: `${this.config.url}/notes/${note.id}`,
 			type: 'Note',
@@ -498,6 +515,7 @@ export class ApRendererService {
 			attachment: files.map(x => this.renderDocument(x)),
 			sensitive: note.cw != null || files.some(file => file.isSensitive),
 			tag,
+			...asEvent,
 			...asPoll,
 		};
 	}
