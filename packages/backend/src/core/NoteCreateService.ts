@@ -13,7 +13,9 @@ import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mf
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import type { IMentionedRemoteUsers } from '@/models/Note.js';
 import { MiNote } from '@/models/Note.js';
-import type { ChannelFollowingsRepository, ChannelsRepository, FollowingsRepository, InstancesRepository, MiFollowing, MiMeta, MutingsRepository, NotesRepository, NoteThreadMutingsRepository, UserListMembershipsRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { ChannelFollowingsRepository, ChannelsRepository, FollowingsRepository, InstancesRepository, MiFollowing, MiMeta, MutingsRepository, NotesRepository, NoteThreadMutingsRepository, UserListMembershipsRepository, UserProfilesRepository, UsersRepository, EventsRepository } from '@/models/_.js';
+import type { IEvent } from '@/models/_.js';
+import { MiEvent } from '@/models/Event.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiApp } from '@/models/App.js';
 import { concat } from '@/misc/prelude/array.js';
@@ -130,6 +132,7 @@ type Option = {
 	renote?: MiNote | null;
 	files?: MiDriveFile[] | null;
 	poll?: IPoll | null;
+	event?: IEvent | null;
 	localOnly?: boolean | null;
 	reactionAcceptance?: MiNote['reactionAcceptance'];
 	cw?: string | null;
@@ -191,6 +194,9 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 		@Inject(DI.channelFollowingsRepository)
 		private channelFollowingsRepository: ChannelFollowingsRepository,
+
+		@Inject(DI.eventsRepository)
+		private eventsRepository: EventsRepository,
 
 		private userEntityService: UserEntityService,
 		private noteEntityService: NoteEntityService,
@@ -416,6 +422,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 			name: data.name,
 			text: data.text,
 			hasPoll: data.poll != null,
+			hasEvent: data.event != null,
 			cw: data.cw ?? null,
 			tags: tags.map(tag => normalizeForSearch(tag)),
 			emojis,
@@ -460,24 +467,41 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 		// 投稿を作成
 		try {
-			if (insert.hasPoll) {
+			if (insert.hasPoll || insert.hasEvent) {
 				// Start transaction
 				await this.db.transaction(async transactionalEntityManager => {
 					await transactionalEntityManager.insert(MiNote, insert);
 
-					const poll = new MiPoll({
-						noteId: insert.id,
-						choices: data.poll!.choices,
-						expiresAt: data.poll!.expiresAt,
-						multiple: data.poll!.multiple,
-						votes: new Array(data.poll!.choices.length).fill(0),
-						noteVisibility: insert.visibility,
-						userId: user.id,
-						userHost: user.host,
-						channelId: insert.channelId,
-					});
+					if (insert.hasPoll) {
+						const poll = new MiPoll({
+							noteId: insert.id,
+							choices: data.poll!.choices,
+							expiresAt: data.poll!.expiresAt,
+							multiple: data.poll!.multiple,
+							votes: new Array(data.poll!.choices.length).fill(0),
+							noteVisibility: insert.visibility,
+							userId: user.id,
+							userHost: user.host,
+							channelId: insert.channelId,
+						});
 
-					await transactionalEntityManager.insert(MiPoll, poll);
+						await transactionalEntityManager.insert(MiPoll, poll);
+					}
+
+					if (insert.hasEvent) {
+						const event = new MiEvent({
+							noteId: insert.id,
+							start: data.event!.start,
+							end: data.event!.end ?? null,
+							title: data.event!.title,
+							metadata: data.event!.metadata,
+							noteVisibility: insert.visibility,
+							userId: user.id,
+							userHost: user.host,
+						});
+
+						await transactionalEntityManager.insert(MiEvent, event);
+					}
 				});
 			} else {
 				await this.notesRepository.insert(insert);
@@ -711,13 +735,14 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 	@bindThis
 	private isQuote(note: Option & { renote: MiNote }): note is Option & { renote: MiNote } & (
-		{ text: string } | { cw: string } | { reply: MiNote } | { poll: IPoll } | { files: MiDriveFile[] }
+		{ text: string } | { cw: string } | { reply: MiNote } | { poll: IPoll } | { event: IEvent } | { files: MiDriveFile[] }
 	) {
 		// NOTE: SYNC WITH misc/is-quote.ts
 		return note.text != null ||
 			note.reply != null ||
 			note.cw != null ||
 			note.poll != null ||
+			note.event != null ||
 			(note.files != null && note.files.length > 0);
 	}
 
