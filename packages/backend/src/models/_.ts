@@ -43,7 +43,6 @@ import { MiClipNote } from '@/models/ClipNote.js';
 import { MiDriveFile } from '@/models/DriveFile.js';
 import { MiDriveFolder } from '@/models/DriveFolder.js';
 import { MiEmoji } from '@/models/Emoji.js';
-import { MiEvent } from '@/models/Event.js';
 import { MiFlash } from '@/models/Flash.js';
 import { MiFlashLike } from '@/models/FlashLike.js';
 import { MiFollowing } from '@/models/Following.js';
@@ -179,7 +178,6 @@ export {
 	MiDriveFile,
 	MiDriveFolder,
 	MiEmoji,
-	MiEvent,
 	MiFollowing,
 	MiFollowRequest,
 	MiGalleryLike,
@@ -238,8 +236,6 @@ export {
 	MiReversiGame,
 };
 
-export type { IEvent } from '@/models/Event.js';
-
 export type AbuseUserReportsRepository = Repository<MiAbuseUserReport> & MiRepository<MiAbuseUserReport>;
 export type AbuseReportNotificationRecipientRepository =
 	Repository<MiAbuseReportNotificationRecipient>
@@ -261,7 +257,6 @@ export type ClipFavoritesRepository = Repository<MiClipFavorite> & MiRepository<
 export type DriveFilesRepository = Repository<MiDriveFile> & MiRepository<MiDriveFile>;
 export type DriveFoldersRepository = Repository<MiDriveFolder> & MiRepository<MiDriveFolder>;
 export type EmojisRepository = Repository<MiEmoji> & MiRepository<MiEmoji>;
-export type EventsRepository = Repository<MiEvent> & MiRepository<MiEvent>;
 export type FollowingsRepository = Repository<MiFollowing> & MiRepository<MiFollowing>;
 export type FollowRequestsRepository = Repository<MiFollowRequest> & MiRepository<MiFollowRequest>;
 export type GalleryLikesRepository = Repository<MiGalleryLike> & MiRepository<MiGalleryLike>;
