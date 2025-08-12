@@ -33,7 +33,6 @@ import { ApPersonService } from './ApPersonService.js';
 import { extractApHashtags } from './tag.js';
 import { ApMentionService } from './ApMentionService.js';
 import { ApQuestionService } from './ApQuestionService.js';
-import { ApEventService } from './ApEventService.js';
 import { ApImageService } from './ApImageService.js';
 import type { Resolver } from '../ApResolverService.js';
 import type { IObject, IPost } from '../type.js';
@@ -68,7 +67,6 @@ export class ApNoteService {
 		private apMentionService: ApMentionService,
 		private apImageService: ApImageService,
 		private apQuestionService: ApQuestionService,
-		private apEventService: ApEventService,
 		private appLockService: AppLockService,
 		private pollService: PollService,
 		private noteCreateService: NoteCreateService,
@@ -192,7 +190,6 @@ export class ApNoteService {
 		}
 
 		const poll = await this.apQuestionService.extractPollFromQuestion(note, resolver).catch(() => undefined);
-		const event = await this.apEventService.extractEventFromNote(note, resolver).catch(() => undefined);
 
 		//#region Contents Check
 		// 添付ファイルとユーザーをこのサーバーで登録する前に内容をチェックする
@@ -327,7 +324,6 @@ export class ApNoteService {
 				apHashtags,
 				apEmojis,
 				poll,
-				event,
 				uri: note.id,
 				url: url,
 			}, silent);
