@@ -151,6 +151,9 @@ export interface IQuestion extends IObject {
 export const isQuestion = (object: IObject): object is IQuestion =>
 	getApType(object) === 'Note' || getApType(object) === 'Question';
 
+export const isEvent = (object: IObject): boolean =>
+	getApType(object) === 'Event' || (getApType(object) === 'Note' && object.name != null && object.startTime != null);
+
 interface IQuestionChoice {
 	name?: string;
 	replies?: ICollection;

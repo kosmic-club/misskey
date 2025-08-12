@@ -80,7 +80,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkUploaderItems :items="uploader.items.value" @showMenu="(item, ev) => showPerUploadItemMenu(item, ev)" @showMenuViaContextmenu="(item, ev) => showPerUploadItemMenuViaContextmenu(item, ev)"/>
 	</div>
 	<MkPollEditor v-if="poll" v-model="poll" @destroyed="poll = null"/>
-	<MkNotePreview v-if="showPreview" :class="$style.preview" :text="text" :files="files" :poll="poll ?? undefined" :useCw="useCw" :cw="cw" :user="postAccount ?? $i"/>
+	<MkEventEditor v-if="event" v-model="event" @destroyed="event = null"/>
+	<MkNotePreview v-if="showPreview" :class="$style.preview" :text="text" :files="files" :poll="poll ?? undefined" :event="event ?? undefined" :useCw="useCw" :cw="cw" :user="postAccount ?? $i"/>
 	<div v-if="showingOptions" style="padding: 8px 16px;">
 	</div>
 	<footer :class="$style.footer">
@@ -88,6 +89,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<button v-tooltip="i18n.ts.attachFile + ' (' + i18n.ts.upload + ')'" class="_button" :class="$style.footerButton" @click="chooseFileFromPc"><i class="ti ti-photo-plus"></i></button>
 			<button v-tooltip="i18n.ts.attachFile + ' (' + i18n.ts.fromDrive + ')'" class="_button" :class="$style.footerButton" @click="chooseFileFromDrive"><i class="ti ti-cloud-download"></i></button>
 			<button v-tooltip="i18n.ts.poll" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: poll }]" @click="togglePoll"><i class="ti ti-chart-arrows"></i></button>
+			<button v-tooltip="i18n.ts.event" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: event }]" @click="toggleEvent"><i class="ti ti-calendar-event"></i></button>
 			<button v-tooltip="i18n.ts.useCw" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: useCw }]" @click="useCw = !useCw"><i class="ti ti-eye-off"></i></button>
 			<button v-tooltip="i18n.ts.hashtags" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: withHashtags }]" @click="withHashtags = !withHashtags"><i class="ti ti-hash"></i></button>
 			<button v-tooltip="i18n.ts.mention" class="_button" :class="$style.footerButton" @click="insertMention"><i class="ti ti-at"></i></button>
@@ -121,6 +123,7 @@ import MkNotePreview from '@/components/MkNotePreview.vue';
 import XPostFormAttaches from '@/components/MkPostFormAttaches.vue';
 import XTextCounter from '@/components/MkPostForm.TextCounter.vue';
 import MkPollEditor from '@/components/MkPollEditor.vue';
+import MkEventEditor from '@/components/MkEventEditor.vue';
 import MkNoteSimple from '@/components/MkNoteSimple.vue';
 import { erase, unique } from '@/utility/array.js';
 import { extractMentions } from '@/utility/extract-mentions.js';
@@ -186,6 +189,7 @@ const posted = ref(false);
 const text = ref(props.initialText ?? '');
 const files = ref(props.initialFiles ?? []);
 const poll = ref<PollEditorModelValue | null>(null);
+const event = ref<Misskey.entities.Note['event'] | null>(null);
 const useCw = ref<boolean>(!!props.initialCw);
 const showPreview = ref(store.s.showPreview);
 watch(showPreview, () => store.set('showPreview', showPreview.value));
@@ -286,6 +290,7 @@ const canPost = computed((): boolean => {
 			1 <= files.value.length ||
 			1 <= uploader.items.value.length ||
 			poll.value != null ||
+			event.value != null ||
 			renoteTargetNote.value != null ||
 			quoteId.value != null
 		) &&
@@ -303,7 +308,7 @@ const canPost = computed((): boolean => {
 
 // cannot save pure renote as draft
 const canSaveAsServerDraft = computed((): boolean => {
-	return canPost.value && (textLength.value > 0 || files.value.length > 0 || poll.value != null);
+	return canPost.value && (textLength.value > 0 || files.value.length > 0 || poll.value != null || event.value != null);
 });
 
 const withHashtags = computed(store.makeGetterSetter('postFormWithHashtags'));
@@ -405,6 +410,7 @@ function watchForDraft() {
 	watch(useCw, () => saveDraft());
 	watch(cw, () => saveDraft());
 	watch(poll, () => saveDraft());
+	watch(event, () => saveDraft());
 	watch(files, () => saveDraft(), { deep: true });
 	watch(visibility, () => saveDraft());
 	watch(localOnly, () => saveDraft());
@@ -448,6 +454,15 @@ function togglePoll() {
 			expiresAt: null,
 			expiredAfter: null,
 		};
+	}
+}
+
+function toggleEvent() {
+	if (event.value) {
+		event.value = null;
+	} else {
+		// Event will be set by MkEventEditor when user fills in required fields
+		event.value = null;
 	}
 }
 
@@ -649,6 +664,7 @@ function clear() {
 	text.value = '';
 	files.value = [];
 	poll.value = null;
+	event.value = null;
 	quoteId.value = null;
 }
 
@@ -921,6 +937,7 @@ async function post(ev?: MouseEvent) {
 		renoteId: renoteTargetNote.value ? renoteTargetNote.value.id : quoteId.value ? quoteId.value : undefined,
 		channelId: targetChannel.value ? targetChannel.value.id : undefined,
 		poll: poll.value,
+		event: event.value,
 		cw: useCw.value ? cw.value ?? '' : null,
 		localOnly: localOnly.value,
 		visibility: visibility.value,
@@ -1236,6 +1253,9 @@ onMounted(() => {
 				files.value = (draft.data.files || []).filter(draftFile => draftFile);
 				if (draft.data.poll) {
 					poll.value = draft.data.poll;
+				}
+				if (draft.data.event) {
+					event.value = draft.data.event;
 				}
 				if (draft.data.visibleUserIds) {
 					misskeyApi('users/show', { userIds: draft.data.visibleUserIds }).then(users => {

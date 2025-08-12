@@ -150,6 +150,7 @@ import { ApMentionService } from './activitypub/models/ApMentionService.js';
 import { ApNoteService } from './activitypub/models/ApNoteService.js';
 import { ApPersonService } from './activitypub/models/ApPersonService.js';
 import { ApQuestionService } from './activitypub/models/ApQuestionService.js';
+import { ApEventService } from './activitypub/models/ApEventService.js';
 import { QueueModule } from './QueueModule.js';
 import { QueueService } from './QueueService.js';
 import { LoggerService } from './LoggerService.js';
@@ -301,6 +302,7 @@ const $ApMentionService: Provider = { provide: 'ApMentionService', useExisting: 
 const $ApNoteService: Provider = { provide: 'ApNoteService', useExisting: ApNoteService };
 const $ApPersonService: Provider = { provide: 'ApPersonService', useExisting: ApPersonService };
 const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting: ApQuestionService };
+const $ApEventService: Provider = { provide: 'ApEventService', useExisting: ApEventService };
 //#endregion
 
 @Module({
@@ -453,6 +455,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ApNoteService,
 		ApPersonService,
 		ApQuestionService,
+		ApEventService,
 		QueueService,
 
 		//#region 文字列ベースでのinjection用(循環参照対応のため)
@@ -601,6 +604,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ApNoteService,
 		$ApPersonService,
 		$ApQuestionService,
+		$ApEventService,
 		//#endregion
 	],
 	exports: [
@@ -749,6 +753,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ApNoteService,
 		ApPersonService,
 		ApQuestionService,
+		ApEventService,
 		QueueService,
 
 		//#region 文字列ベースでのinjection用(循環参照対応のため)
@@ -894,6 +899,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ApMentionService,
 		$ApNoteService,
 		$ApPersonService,
+		$ApEventService,
 		$ApQuestionService,
 		//#endregion
 	],
